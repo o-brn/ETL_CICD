@@ -1,0 +1,60 @@
+name: ETL Diario
+
+on:
+  schedule:
+    #Roda todos os dias às 09:00 UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: #Permite rodar manualmente
+
+jobs:
+  coleta-dados:
+    runs-on: ubuntu-latest
+    
+    #Permissão para o bot commitar arquivos
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          version: "latest"
+
+      - name: Configurar Python
+        run: uv python install 3.11.7
+
+      - name: Instalar Dependências
+        # O uv sync le o uv.lock e instala exatamente as dependeicas locais
+        run: uv sync
+
+      - name: Executar ETL
+        # 'uv run' executa o script
+        run: uv run src/main.py
+
+      # Se o script passar, salva os dados
+      - name: Salvar Dados no Repositório
+        if: success()
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data/ logs/
+          # O "|| echo" evita que o workflow falhe se não houver nada novo para salvar (ex: dia 11)
+          git commit -m "DATA: Atualização automática diária" || echo "Sem mudanças para commitar"
+          git push
+
+      # Se o script falhar (exit 1), enviamos o e-mail
+      - name: Notificar Falha via Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "ALERTA: Falha na ETL"
+          body: O processo de coleta diária falhou. Verifique os logs no GitHub Actions.
+          to: brn.olives@gmail.com
+          from: GitHub Actions Bot
