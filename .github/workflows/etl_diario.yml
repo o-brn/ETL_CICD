@@ -43,6 +43,9 @@ jobs:
           git add data/ logs/
           # O "|| echo" evita que o workflow falhe se não houver nada novo para salvar (ex: dia 11)
           git commit -m "DATA: Atualização automática diária" || echo "Sem mudanças para commitar"
+
+          git pull --rebase origin main
+
           git push
 
       # Se o script falhar (exit 1), enviamos o e-mail
