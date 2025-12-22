@@ -72,7 +72,7 @@ def main():
 
     try:
         # 1. Requisição a API
-        response = requests.get(API_URL, timeout=10)
+        response = requests.get(API_URL, timeout=30)
         response.raise_for_status()  # Garante que erros 404/500 parem o script
 
         # 2. Processamento dos Dados
